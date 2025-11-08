@@ -1,0 +1,8 @@
+/.DS_Store
+/.github
+/.idea
+/.pytest_cache
+/.venv
+/.vscode
+/images/
+/output
