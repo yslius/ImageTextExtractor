@@ -84,35 +84,36 @@ class OCRProcessor:
             if not image_path.exists():
                 raise FileNotFoundError(f"画像ファイルが見つかりません: {image_path}")
 
-            if image_path.suffix.lower() not in self.SUPPORTED_FORMATS:
-                raise ValueError(
-                    f"サポートされていない画像形式です: {image_path.suffix}"
+            suffix = image_path.suffix.lower()
+            if suffix in self.SUPPORTED_FORMATS:
+                if preprocess:
+                    # 前処理を適用
+                    processed_image = self.preprocess_image(image_path)
+                    # OpenCVからPILに変換
+                    pil_image = Image.fromarray(processed_image)
+                else:
+                    # 直接画像を読み込み
+                    pil_image = Image.open(image_path)
+
+                # Tesseract設定
+                custom_config = r"--oem 3 --psm 6"
+
+                # テキスト抽出
+                text = pytesseract.image_to_string(
+                    pil_image, lang=self.lang, config=custom_config
                 )
 
-            if preprocess:
-                # 前処理を適用
-                processed_image = self.preprocess_image(image_path)
-                # OpenCVからPILに変換
-                pil_image = Image.fromarray(processed_image)
+                # 空白文字の整理
+                cleaned_text = "\n".join(
+                    line.strip() for line in text.split("\n") if line.strip()
+                )
+
+                logger.info(f"テキスト抽出完了: {len(cleaned_text)}文字")
+                return cleaned_text
             else:
-                # 直接画像を読み込み
-                pil_image = Image.open(image_path)
-
-            # Tesseract設定
-            custom_config = r"--oem 3 --psm 6"
-
-            # テキスト抽出
-            text = pytesseract.image_to_string(
-                pil_image, lang=self.lang, config=custom_config
-            )
-
-            # 空白文字の整理
-            cleaned_text = "\n".join(
-                line.strip() for line in text.split("\n") if line.strip()
-            )
-
-            logger.info(f"テキスト抽出完了: {len(cleaned_text)}文字")
-            return cleaned_text
+                raise ValueError(
+                    f"サポートされていないファイル形式です: {image_path.suffix}"
+                )
 
         except Exception as e:
             logger.error(f"テキスト抽出中にエラーが発生しました: {e}")
